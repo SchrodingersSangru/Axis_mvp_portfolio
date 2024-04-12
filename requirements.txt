@@ -59,8 +59,8 @@ mdurl==0.1.2
 minorminer==0.2.13
 ml-collections==0.1.1
 mpmath==1.3.0
-multitasking==0.0.11
-networkx==3.3
+# multitasking==0.0.11
+networkx==3.2.1
 numpy==1.26.4
 optuna==3.6.1
 packaging==24.0
