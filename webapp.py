@@ -17,6 +17,20 @@ import datetime
 from pprint import pprint
 from statsmodels.tsa.filters.hp_filter import hpfilter
 optuna.logging.set_verbosity(optuna.logging.WARNING)
+from qiskit_optimization.converters import QuadraticProgramToQubo
+
+from dwave.system import DWaveSampler, EmbeddingComposite
+import dimod
+from qiskit_optimization import QuadraticProgram
+from docplex.mp.model import Model
+
+
+from qiskit_optimization.converters.quadratic_program_to_qubo import (
+    QuadraticProgramToQubo,
+)
+
+from qiskit_optimization.translators import from_docplex_mp
+
 
 seed = 42
 cfg = ml_collections.ConfigDict()
@@ -128,6 +142,24 @@ if st.button('Next'):
 
     cfg.kappa = cfg.num_stocks
     
+    def create_problem(mu: np.array, sigma: np.array, qiskit_budget: int, alpha: float) -> QuadraticProgram:
+        """Solve the quadratic program using docplex."""
+
+        mdl = Model()
+        x = [mdl.binary_var("x%s" % i) for i in range(len(sigma))]
+
+        objective = mdl.sum([mu[i] * x[i] for i in range(len(mu))])
+        objective -= alpha * mdl.sum(
+            [sigma[i, j] * x[i] * x[j] for i in range(len(mu)) for j in range(len(mu))]
+        )
+        # objective = 
+        mdl.maximize(objective)
+        cost = mdl.sum(x)
+        mdl.add_constraint(cost == qiskit_budget)
+
+        qp = from_docplex_mp(mdl)
+        return qp
+    
     def objective_mvo_miqp(trial, _mu, _sigma):
         cpo = ClassicalPO(_mu, _sigma, cfg)
         cpo.cfg.gamma = trial.suggest_float('gamma', 0.0, 1.5)
@@ -141,7 +173,37 @@ if st.button('Next'):
         direction='maximize',
         pruner=optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=50),
         load_if_exists=True)
+    
+    
+    mu = np.array([3.418, 2.0913, 6.2415, 4.4436, 10.892, 3.4051])
+    sigma = np.array(
+        [
+            [1.07978412, 0.00768914, 0.11227606, -0.06842969, -0.01016793, -0.00839765],
+            [0.00768914, 0.10922887, -0.03043424, -0.0020045, 0.00670929, 0.0147937],
+            [0.11227606, -0.03043424, 0.985353, 0.02307313, -0.05249785, 0.00904119],
+            [-0.06842969, -0.0020045, 0.02307313, 0.6043817, 0.03740115, -0.00945322],
+            [-0.01016793, 0.00670929, -0.05249785, 0.03740115, 0.79839634, 0.07616951],
+            [-0.00839765, 0.0147937, 0.00904119, -0.00945322, 0.07616951, 1.08464544],
+        ]
+    )
+    qiskit_budget = len(mu)//2
+    alpha = 1.0
+    qp = create_problem(mu, sigma, qiskit_budget, alpha)
+    qp2qubo = QuadraticProgramToQubo()
+    qubo = qp2qubo.convert(qp)
 
+
+    sampler_dw = DWaveSampler(solver='Advantage_system4.1', token = 'DEV-0fb34d846c85d1e57c7974c2679751c459594c1d')
+    sampler_qa = EmbeddingComposite(sampler_dw)
+
+    bqm_qubo = dimod.as_bqm(qubo.objective.linear.to_array(), qubo.objective.quadratic.to_array(), dimod.BINARY)
+
+    embedded_sampler = EmbeddingComposite(sampler_dw)
+    result_using_dwave = embedded_sampler.sample(bqm_qubo, label="example_qp", num_reads=5000)
+    print("dwave result is ", result_using_dwave)
+    st.text(result_using_dwave)
+    
+    
     study_mvo_miqp.optimize(lambda trial: objective_mvo_miqp(trial, mu, sigma), n_trials=25-len(study_mvo_miqp.trials), n_jobs=1)
     trial_mvo_miqp = study_mvo_miqp.best_trial
     cpo = ClassicalPO(mu, sigma, cfg)
@@ -250,6 +312,11 @@ if st.button('Next'):
     fig_sector_axis.update_traces(hoverinfo='label+percent',textfont_size=15, marker=dict(line=dict(color='#000000', width=2)))
     st.markdown("**Pie Chart of Sector Weights given in the Attribution Report:**")
     st.plotly_chart(fig_sector_axis)
+    
+# data = 13 months data file                 
+# data = pd.read_csv('stock_closing_prices.csv', parse_dates=['Date'])
+# stock_closing_prices = pd.read_csv('stock_closing_prices.csv')  data = stocks_closing_parse 
+
 
     first_row_prices = data.iloc[0, 0:]
     investment_values = first_row_prices * 100
@@ -263,6 +330,9 @@ if st.button('Next'):
     #st.text(f"{'Stock':<25}{'Stocks to buy':>15}")
     for stock, value in optimal_stocks_to_buy.items():
         st.text(f"{stock:<25}{value:>15}")
+        
+# stock_closing_prices = pd.read_csv('stock_closing_prices.csv')
+# 
 
     portfolio_values = stock_closing_prices.apply(lambda row: sum(
     row[stock] * optimal_stocks_to_buy[stock] for stock in optimal_stocks_to_buy), axis=1)

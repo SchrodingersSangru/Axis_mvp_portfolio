@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install -r requirements.txt
 
-ENTRYPOINT ["streamlit", "run", "webapp.py", "--server.port=8501", "--server.address=0.0.0.0"]
+ENTRYPOINT ["streamlit", "run", "webapp_final.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
 # streamlit run portfolio_dashboard.py --server.port=8501 --server.address=0.0.0.0
 
