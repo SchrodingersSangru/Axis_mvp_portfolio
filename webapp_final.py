@@ -46,7 +46,7 @@ cfg = ml_collections.ConfigDict()
 
 
 st.set_page_config(page_title="Pilot Project", page_icon=":chart_with_upwards_trend:", layout="wide")
-st.title("Pilot Project on Portfolio Optimisation ")
+st.title(" Financial Portfolio Management Project ")
 #st.markdown('<style>div.block-container{padding-top:2.5rem;}</style>', unsafe_allow_html=True)
 
 
@@ -84,7 +84,7 @@ if st.button('Next'):
 
         # Filter DataFrame rows based on date range
         closing_prices_df = stock_closing_prices_3y.loc[start_date:end_date]
-        st.write(closing_prices_df)
+        # st.write(closing_prices_df)
         closing_prices_df = closing_prices_df[assets_input]
         
         stock_closing_prices_3y = stock_closing_prices_3y[assets_input]
@@ -266,8 +266,7 @@ if st.button('Next'):
         
         df = closing_prices_df
         
-        print("df is ", df)
-
+        #print("df is ", df)
         
         investment_values = first_row_prices * 100
         total_investment_amount = investment_values.sum()
@@ -312,7 +311,7 @@ if st.button('Next'):
         fig.update_layout(xaxis_title='Date', yaxis_title='Portfolio Value (in rupees)', autosize=False, width=1000, height=600)
         st.plotly_chart(fig)
 
-        print(df.columns)
+        #print(df.columns)
         
         ## need to resolve this import too.  its not required to import files everytime. 
         investment_per_stock_us = {stock: total_investment_amount * weight for stock, weight in stock_dict.items()}
