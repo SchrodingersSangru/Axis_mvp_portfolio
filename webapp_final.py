@@ -45,8 +45,8 @@ seed = 42
 cfg = ml_collections.ConfigDict()
 
 
-st.set_page_config(page_title="Pilot Project", page_icon=":chart_with_upwards_trend:", layout="wide")
-st.title(" Financial Portfolio Management Project ")
+st.set_page_config(page_title="PilotProject", page_icon=":chart_with_upwards_trend:", layout="wide")
+st.title("Pilot Project on Portfolio Optimisation ")
 #st.markdown('<style>div.block-container{padding-top:2.5rem;}</style>', unsafe_allow_html=True)
 
 
@@ -57,7 +57,7 @@ assets_input = st.multiselect('Enter stock ticker symbols separated by commas, e
 print(type(assets_input))
 # User input for start and end dates
 start_date = st.date_input('Start date of the Portfolio:', datetime.date(2023, 2, 1))
-end_date = st.date_input('End date of the Portfolio:',  datetime.date(2024, 2, 26)  )
+end_date = st.date_input('End date of the Portfolio:',  datetime.date(2024, 1, 31)  )
 
 
 if st.button('Next'):
@@ -84,7 +84,7 @@ if st.button('Next'):
 
         # Filter DataFrame rows based on date range
         closing_prices_df = stock_closing_prices_3y.loc[start_date:end_date]
-        # st.write(closing_prices_df)
+        st.write(closing_prices_df)
         closing_prices_df = closing_prices_df[assets_input]
         
         stock_closing_prices_3y = stock_closing_prices_3y[assets_input]
@@ -93,9 +93,9 @@ if st.button('Next'):
         # closing_prices_df = stock_closing_prices_3y
 
         # closing_prices_df = stock_closing_prices_3y.loc[start_date:end_date]
-        st.markdown("** Adj Closing Prices:**")
-        st.dataframe(closing_prices_df)
-        print(closing_prices_df)
+        #st.markdown("** Adj Closing Prices:**")
+        #st.dataframe(closing_prices_df)
+        #print(closing_prices_df)
         
         
         # stock_closing_prices_3y = closing_prices_df.reset_index(drop=True)
@@ -266,7 +266,8 @@ if st.button('Next'):
         
         df = closing_prices_df
         
-        #print("df is ", df)
+        print("df is ", df)
+
         
         investment_values = first_row_prices * 100
         total_investment_amount = investment_values.sum()
@@ -275,6 +276,8 @@ if st.button('Next'):
         
         investment_per_stock = {stock: total_investment_amount * weight for stock, weight in weights_axis.items()}
         optimal_stocks_to_buy = {stock: investment // stock_prices_for_algo.loc[0, stock] for stock, investment in investment_per_stock.items()}
+        optimal_stocks_at = {stock: investment // stock_prices_for_algo.loc[0, stock] for stock, investment in investment_per_stock.items()}
+        #st.write(optimal_stocks_at)
         st.markdown("**Optimal Number of Stocks to buy (weights given in the attribution report):**")
         #st.write(optimal_stocks_to_buy)
         #st.text(f"{'Stock':<25}{'Stocks to buy':>15}")
@@ -297,7 +300,7 @@ if st.button('Next'):
         # Ensure 'Date' column is in datetime format
         df['Date'] = pd.to_datetime(closing_prices_df['Date'])
         # print(df)  
-        # st.dataframe(df)
+        #st.dataframe(df)
         df['Date'] = pd.to_datetime(closing_prices_df['Date'])   # about this line as well.       
         print("printing df ", df)  
 
@@ -311,11 +314,13 @@ if st.button('Next'):
         fig.update_layout(xaxis_title='Date', yaxis_title='Portfolio Value (in rupees)', autosize=False, width=1000, height=600)
         st.plotly_chart(fig)
 
-        #print(df.columns)
+        print(df.columns)
         
         ## need to resolve this import too.  its not required to import files everytime. 
         investment_per_stock_us = {stock: total_investment_amount * weight for stock, weight in stock_dict.items()}
         optimal_stocks_to_buy_us = {stock: investment // df.loc[0, stock] for stock, investment in investment_per_stock_us.items()}
+        optimal_stocks_qk = {stock: investment // df.loc[0, stock] for stock, investment in investment_per_stock_us.items()}
+        #st.write(optimal_stocks_to_buy_us)
         st.markdown("**Optimal Number Stocks to buy (weights given by the Algorithm):**")
         #st.write(optimal_stocks_to_buy_us)
         #st.text(f"{'Stock':<25}{'Stocks to buy':>15}")
@@ -388,6 +393,10 @@ if st.button('Next'):
                 dimod.BINARY,)
             return bqm
         
+        #init_holding_amar = optimal_stocks_to_buy
+        #st.text('init_holding_amar:')
+        #st.write(init_holding_amar)
+
         def process_portfolio(init_holdings):
             cfg.hpfilter_lamb = 6.25
             cfg.q = 1.0  # risk-aversion factor
@@ -417,13 +426,13 @@ if st.button('Next'):
             constituents = pd.read_csv('constituents_nifty50.csv')
             sector_map = constituents.loc[constituents['symbol'].isin(tickers)]
             dates = data["Date"].to_numpy()
-            monthly_df = data.resample('3ME', on='Date').last() # resample to every 3 months
+            monthly_df = data.resample('3M', on='Date').last() # resample to every 3 months
             month_end_dates = monthly_df.index
             available_sectors, counts = np.unique(np.array(sector_map.sector.tolist()), return_counts=True)
 
             total_budget = total_investment_amount
             num_months = len(month_end_dates)
-            first_purchase = True
+            first_purchase = True 
             result = {}
             update_values = [0]
             months = []
@@ -537,27 +546,22 @@ if st.button('Next'):
                 first_purchase = False
             return opt_results_df
         
-        init_holding_amar = optimal_stocks_to_buy
+        #init_holding_amar = optimal_stocks_to_buy
         #st.write(init_holding_amar)
-        init_holding_qkrishi = optimal_stocks_to_buy_us
+        #init_holding_qkrishi = optimal_stocks_to_buy_us
 
 
         # @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @  @ @ @ @ @ @ @ @  @ @ @ @ @ @ @  @ @ @ @ @@ @ @ @  @ @ @
-        process_portfolio_amar = process_portfolio(init_holding_amar)
+        #st.text('optimal_stocks_to_buy:')
+        #st.write(optimal_stocks_to_buy)
+        process_portfolio_amar = process_portfolio(optimal_stocks_to_buy)
         #st.write(process_portfolio_amar)
         process_portfolio_amar_df = process_portfolio_amar.to_csv('rebalancing_amar.csv')
         dataf = pd.read_csv('rebalancing_amar.csv')
-        new_data_dict = {'BHARTIARTL.NS': 108.0,
-            'HDFCBANK.NS': 91.0,
-            'HINDUNILVR.NS': 92.0,
-            'ICICIBANK.NS': 103.0,
-            'INFY.NS': 86.0,
-            'ITC.NS': 111.0,
-            'LT.NS': 118.0,
-            'RELIANCE.NS': 107.0,
-            'SBIN.NS': 103.0,
-            'TCS.NS': 94.0}
-        #st.write(new_data_dict)
+        #st.write(optimal_stocks_at)
+        new_data_dict = optimal_stocks_at
+        #st.text('new_data_dict:')
+        #st.write(optimal_stocks_at)
         new_row_df = pd.DataFrame(new_data_dict, index=[0])
         for column in dataf.columns:
             if column not in new_row_df.columns:
@@ -591,7 +595,7 @@ if st.button('Next'):
 
         updated_dataf["Value"] = updated_dataf["Value"] * total_investment_amount
         updated_dataf = updated_dataf.loc[:, (updated_dataf != 0).any(axis=0)] # to remove columns with 0s
-        updated_dataf = updated_dataf.to_html(escape=False)
+        updated_dataf = updated_dataf.to_html(float_format=lambda x: '{:.2f}'.format(x), escape=False)
         #st.write(new_data_dict)
         st.write("AMAR's Portfolio after Rebalancing:")
         st.write(updated_dataf, unsafe_allow_html=True)
@@ -599,21 +603,12 @@ if st.button('Next'):
         df_fta['Date'] = pd.to_datetime(df_fta['Date'])
         # @ @ @@ @ @ @ @ @ @ @ @ @ @ @  @ @ @ @ @ @ @ @ @ @ @ @ @ @ @  @ @ @  @ @  @ @ @ @ @ @ 
 
-        process_portfolio_qkrishi = process_portfolio(init_holding_qkrishi)
+        process_portfolio_qkrishi = process_portfolio(optimal_stocks_to_buy_us)
         #st.write(process_portfolio_amar)
         process_portfolio_qkrishi_df = process_portfolio_qkrishi.to_csv('rebalancing_qkrishi.csv')
         datafq = pd.read_csv('rebalancing_qkrishi.csv')
-        new_data_dictq = {'BHARTIARTL.NS': 304.0,
-                        'HDFCBANK.NS': 23.0,
-                        'HINDUNILVR.NS': 21.0,
-                        'ICICIBANK.NS': 204.0,
-                        'INFY.NS': 72.0,
-                        'ITC.NS': 357.0,
-                        'LT.NS': 121.0,
-                        'RELIANCE.NS': 98.0,
-                        'SBIN.NS': 435.0,
-                        'TCS.NS': 44.0}
-        #st.write(new_data_dict)
+        new_data_dictq = optimal_stocks_qk
+        #st.write(new_data_dictq)
         new_row_dfq = pd.DataFrame(new_data_dictq, index=[0])
         for column in datafq.columns:
             if column not in new_row_dfq.columns:
@@ -647,7 +642,7 @@ if st.button('Next'):
 
         updated_datafq["Value"] = updated_datafq["Value"] * total_investment_amount
         updated_datafq = updated_datafq.loc[:, (updated_datafq != 0).any(axis=0)] # to remove all columns with 0s
-        updated_datafq = updated_datafq.to_html(escape=False)
+        updated_datafq = updated_datafq.to_html(float_format=lambda x: '{:.2f}'.format(x), escape=False)
         #st.write(new_data_dict)
         st.write("QKRISHI's Portfolio after Rebalancing:")
         st.write(updated_datafq, unsafe_allow_html=True)
@@ -823,5 +818,3 @@ if st.button('Next'):
                 fig_port.update_traces(name='Portfolio Value', showlegend=True)
                 fig_port.update_layout(xaxis_title='Date', yaxis_title='Portfolio Value (in rupees)', autosize=False, width=1000, height=600)
                 st.plotly_chart(fig_port)
-
-        
