@@ -532,13 +532,14 @@ if st.button('Next'):
                         else:
                             init_holdings[tick] += val
                 value = sum([price[s] * result.get(s, 0.0) for s in tickers_new]) # Amount invested in purchasing
+                value_port = sum([price[s] * init_holdings.get(s, 0.0) for s in init_holdings]) # Portfolio Value after Rebalancing
                 wallet = (sales_revenue + wallet) - value # Amount left in wallet
 
                 returns = f"{metrics['returns']:.2f}"
                 risk = f"{metrics['risk']:.2f}"
                 sr = f"{metrics['sharpe_ratio']:.2f}"
 
-                row = [months[-1].strftime('%Y-%m-%d'), value/initial_budget] + \
+                row = [months[-1].strftime('%Y-%m-%d'), value_port/initial_budget] + \
                     [init_holdings.get(s, 0) for s in tickers] + \
                     [risk, returns, sr] 
                 
@@ -651,15 +652,16 @@ if st.button('Next'):
         
 
         fig_rebalancing = go.Figure()
-        fig_rebalancing.add_trace(go.Scatter(x=df_fta['Date'], y=df_fta['Value'], mode='lines+markers', name='AMAR Value', line=dict(color='red'), showlegend=True))
-        fig_rebalancing.add_trace(go.Scatter(x=df_ftq['Date'], y=df_ftq['Value'], mode='lines+markers', name='Qkrishi Value', line=dict(color='blue'), showlegend=True))
+        fig_rebalancing.add_trace(go.Scatter(x=df_fta['Date'], y=df_fta['Value'], mode='lines+markers', name='AMAR Value + Qkrishi Rebalancing', line=dict(color='red'), showlegend=True))
+        fig_rebalancing.add_trace(go.Scatter(x=df_ftq['Date'], y=df_ftq['Value'], mode='lines+markers', name='Qkrishi Value + Qkrishi Rebalancing', line=dict(color='blue'), showlegend=True))
         
         fig_rebalancing.update_layout(title='Rebalanced Values Over Time',
             xaxis_title='Date', 
             yaxis_title='Final Value',
             autosize=False, 
             width=1000, 
-            height=600,)
+            height=600,
+            yaxis_range=[1500000,2200000])
         
         st.plotly_chart(fig_rebalancing)
         
