@@ -6,6 +6,8 @@ To deploy it on the cloud,
 3. Run the following commands to, build a docker and run it. 
 
 sudo docker build -t streamlit .
+
+
 sudo docker run -p 8501:8501 streamlit
 
 where streamlit is a image name. 
