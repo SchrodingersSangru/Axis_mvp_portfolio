@@ -625,17 +625,11 @@ if st.button('Next'):
         st.markdown('**Contribution to return - BENCH, Bottom 10**')
         st.text(sorted(contribution_return_bench.items(), key=lambda x: x[1]))
 
+        #Penny Stocks
+        st.markdown('**Penny Stocks**')
+        st.text('There are no penny stocks included our portfolio as all of the listed stocks fall under HDFCNIFTY50 or NIFTY10')
 
 
-
-
-
-
-
-
-
-
-        
         # closing_prices_df['Date'] = pd.to_datetime(closing_prices_df['Date'])
 
         # closing_prices_df = closing_prices_df[assets_input]
