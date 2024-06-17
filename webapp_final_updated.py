@@ -54,10 +54,11 @@ assets_input = st.multiselect('Enter stock ticker symbols separated by commas, e
                              ['BHARTIARTL.NS', 'HDFCBANK.NS','HINDUNILVR.NS','ICICIBANK.NS','INFY.NS','ITC.NS','LT.NS','RELIANCE.NS','SBIN.NS','TCS.NS'],
                               ['BHARTIARTL.NS', 'HDFCBANK.NS','HINDUNILVR.NS','ICICIBANK.NS','INFY.NS','ITC.NS','LT.NS','RELIANCE.NS','SBIN.NS','TCS.NS'] )
 
-print(type(assets_input))
+#print(type(assets_input))
 # User input for start and end dates
 start_date = st.date_input('Start date of the Portfolio:', datetime.date(2023, 2, 1))
 end_date = st.date_input('End date of the Portfolio:',  datetime.date(2024, 1, 31)  )
+
 
 
 if st.button('Next'):
@@ -314,19 +315,22 @@ if st.button('Next'):
 
         # POINT (b)
         st.markdown('**Portfolio Weight vs Benchmark Weight**')
-        port = {'Information Technology': '28.66', 'Financials':'18.29', 'Consumer Staples':'17.44', 'Industrials':'15.88', 'Energy':'14.49', 'Communication Services':'5.23'}
-        bench = {'Information Technology': '13.64', 'Financials':'36.37', 'Consumer Staples':'9.38', 'Industrials':'5.40', 'Energy':'11.89', 'Communication Services':'2.63'}
-        common_keys = set(port.keys()) & set(bench.keys())
-        for key in common_keys:
-            port_value = float(port[key])
-            bench_value = float(bench[key])
+        port = {'IT': '28.66', 'Banks':'18.29', 'Discretionary':'17.44', 'Industrials':'15.88', 'Oil & Gas':'14.49', 'Tele & Media':'5.23'}
+        bench = {'IT': '13.64', 'Banks':'36.37', 'Discretionary':'9.38', 'Industrials':'5.40', 'Oil & Gas':'11.89', 'Tele & Media':'2.63'}
+        port = {key: float(value) for key, value in port.items()}
+        bench = {key: float(value) for key, value in bench.items()}
+
+        data_b = []
+        for key in port.keys():
+            port_value = port[key]
+            bench_value = bench[key]
             difference = port_value - bench_value
-            if difference > 0:
-                st.text(f"{key}: Overweight by {abs(difference)}")
-            elif difference < 0:
-                st.text(f"{key}: Underweight by {abs(difference)}")
-            else:
-                st.text(f"{key}: Neutral")
+            status = 'Overweight' if difference > 0 else 'Underweight' if difference < 0 else 'Neutral'
+            data_b.append([key, port_value, bench_value, status, difference])
+
+        df_b = pd.DataFrame(data_b, columns=['Sector', 'Portfolio Weight', 'Benchmark Weight', 'Status', 'Difference'])
+        df_b = df_b.sort_values(by='Benchmark Weight', ascending=False)
+        st.write(df_b)
 
         # POINT (c)
         st.markdown('**Sebi Classification-wise Weights**')
@@ -444,17 +448,6 @@ if st.button('Next'):
 
         mid_cap = ['Hero MotoCorp Ltd']
 
-        large_cap_weight = sum(float(bench_weights.get(company, 0)) for company in large_cap)
-        mid_cap_weight = sum(float(bench_weights.get(company, 0)) for company in mid_cap)
-        labels = ['Large Cap', 'Mid Cap']
-        sizes = [large_cap_weight, mid_cap_weight]
-        colors = ['gold', 'DeepPink' ]
-
-        fig_sector_bench = go.Figure(data=[go.Pie(labels=labels,values=sizes, hole=.3)])
-        fig_sector_bench.update_traces(hoverinfo='label+percent',textfont_size=15, marker=dict(colors=colors, line=dict(color='#000000', width=2)))
-        st.markdown("**Benchmark Weight Distribution**")
-        st.plotly_chart(fig_sector_bench)
-
         large_cap_weight_port = sum(float(port_weights.get(company, 0)) for company in large_cap)
         mid_cap_weight_port = sum(float(port_weights.get(company, 0)) for company in mid_cap)
         labels_port = ['Large Cap', 'Mid Cap']
@@ -466,7 +459,7 @@ if st.button('Next'):
         st.plotly_chart(fig_sector_port)
 
         #POINT (e)
-        st.markdown('**Top 10 best and Bottom 10 worst performers(Based on Return)**')
+        st.markdown('**Top 10 gainners and Bottom 10 laggers (Based on Return)**')
         adj_close_df = pd.read_csv(f'stock_closing_prices.csv', usecols=range(11))
         data = adj_close_df.drop(columns=['Date'])
         tickers = sorted(["BHARTIARTL.NS", "HDFCBANK.NS", "HINDUNILVR.NS", "ICICIBANK.NS", "INFY.NS", "ITC.NS", "LT.NS", "RELIANCE.NS", "SBIN.NS", "TCS.NS"])
@@ -487,35 +480,36 @@ if st.button('Next'):
 
         col3, col4 = st.columns(2)
         with col3:
-            st.markdown('**Bottom 10 Worst**')
-            st.write(mu.sort_values())
+            st.markdown('**Top 10 gainners**')
+            st.write(mu.sort_values(ascending=False).head(10).apply(lambda x: f"{x:.2f}%"))
         with col4:
-            st.markdown('**Top 10 Best**')
-            st.write(mu.sort_values(ascending=False))
+            st.markdown('**Bottom 10 laggers**')
+            st.write(mu.sort_values().head(10).apply(lambda x: f"{x:.2f}%"))
+            
 
         #POINT (f)
         st.markdown('**Top 10 relative weight, Bottom 10 relative weight**')
-        port_weights = {'Tata Consultancy Services Ltd':'20.25',
-        'Infosys Ltd':'8.41',
-        'HDFC Bank Ltd':'9.36',
-        'ICICI Bank Ltd':'5.52',
-        'State Bank of India':'3.42',
-        'Hindustan Unilever Ltd':'14.91',
-        'ITC Ltd':'2.53',
-        'Larsen & Toubro Ltd':'15.88',
-        'Reliance Industries Ltd': '14.49',
-        'Bharti Airtel Ltd': '5.23'}
+        port_weights = {'TCS.NS':'20.25',
+        'INFY.NS':'8.41',
+        'HDFCBANK.NS':'9.36',
+        'ICICIBANK.NS':'5.52',
+        'SBI.NS':'3.42',
+        'HINDUNILVR.NS':'14.91',
+        'ITC.NS':'2.53',
+        'LT.NS':'15.88',
+        'RELIANCE.NS': '14.49',
+        'BHARTIARTL.NS': '5.23'}
 
-        benchmark_weights = {'Tata Consultancy Services Ltd':'4.17',
-        'Infosys Ltd':'6.07',
-        'HDFC Bank Ltd':'11.20',
-        'ICICI Bank Ltd':'7.76',
-        'State Bank of India':'2.64',
-        'Hindustan Unilever Ltd':'2.68',
-        'ITC Ltd':'4.49',
-        'Larsen & Toubro Ltd':'3.84',
-        'Reliance Industries Ltd': '9.89',
-        'Bharti Airtel Ltd': '2.63'}
+        benchmark_weights = {'TCS.NS':'4.17',
+        'INFY.NS':'6.07',
+        'HDFCBANK.NS':'11.20',
+        'ICICIBANK.NS':'7.76',
+        'SBI.NS':'2.64',
+        'HINDUNILVR.NS':'2.68',
+        'ITC.NS':'4.49',
+        'LT.NS':'3.84',
+        'RELIANCE.NS': '9.89',
+        'BHARTIARTL.NS': '2.63'}
 
         keys = set(port_weights.keys()) & set(benchmark_weights.keys())
         results = []
@@ -523,21 +517,27 @@ if st.button('Next'):
             port_value = float(port_weights[key])
             bench_value = float(benchmark_weights[key])
             difference = port_value - bench_value
-            results.append((key, abs(difference)))
-        sorted_results = sorted(results, key=lambda x: x[1], reverse=True)
-        sorted_results_bottom = sorted(results, key=lambda x: x[1], reverse=False)
-        st.markdown('**Top 10 Relative Weight**')
-        st.text(sorted_results)
+            results.append((key, port_value, bench_value, difference))
 
-        st.markdown('**Bottom 10 Relative Weight**')
-        st.text(sorted_results_bottom)
+        sorted_results = sorted(results, key=lambda x: x[3], reverse=True)[:10]
+        sorted_results_bottom = sorted(results, key=lambda x: x[3])[:10]
+        df_top_10 = pd.DataFrame(sorted_results, columns=['Company', 'Portfolio Weight (%)', 'Benchmark Weight (%)', 'Difference (%)'])
+        df_bottom_10 = pd.DataFrame(sorted_results_bottom, columns=['Company', 'Portfolio Weight (%)', 'Benchmark Weight (%)', 'Difference (%)'])
+
+        col5, col6 = st.columns(2)
+        with col5:
+            st.markdown('**Top 10 Relative Weight**')
+            st.write(df_top_10)
+        with col6:
+            st.markdown('**Bottom 10 Relative Weight**')
+            st.write(df_bottom_10)
+
 
         #POINT (g)
         st.markdown('**Top 10 holdings, Bottom 10 holdings (With performance of 1m, 3m, 6m, 1 yr)**')
         stock_data = pd.read_csv('stock_closing_prices.csv')
         stock_data['Date'] = pd.to_datetime(stock_data['Date'])
-    
-        def func(dataframe, days):
+        def calculate_returns(dataframe, days):
             log_returns = np.log(dataframe) - np.log(dataframe.shift(1))
             null_indices = np.where((log_returns.isna().sum() > 1).to_numpy())[0]
             drop_stocks = dataframe.columns[null_indices]
@@ -545,39 +545,69 @@ if st.button('Next'):
             log_returns = log_returns.dropna()
             tickers = log_returns.columns
             mu = log_returns.mean() * days
-            sigma = log_returns.cov().to_numpy() * days
-            return mu.sort_values()
-    
-        start_date = pd.to_datetime('2023-02-01')
-        end_date = pd.to_datetime('2023-03-01')
-        filtered_df = stock_data[(stock_data['Date'] >= start_date) & (stock_data['Date'] <= end_date)].drop(columns=['Date'])
+            return mu
+        
+        start_date_1m = pd.to_datetime('2023-02-01')
+        end_date_1m = pd.to_datetime('2023-03-01')
+        filtered_df_1m = stock_data[(stock_data['Date'] >= start_date_1m) & (stock_data['Date'] <= end_date_1m)].drop(columns=['Date'])
 
-        start_date_3 = pd.to_datetime('2023-02-01')
-        end_date_3 = pd.to_datetime('2023-05-01')
-        filtered_df_3 = stock_data[(stock_data['Date'] >= start_date_3) & (stock_data['Date'] <= end_date_3)].drop(columns=['Date'])
+        start_date_3m = pd.to_datetime('2023-02-01')
+        end_date_3m = pd.to_datetime('2023-05-01')
+        filtered_df_3m = stock_data[(stock_data['Date'] >= start_date_3m) & (stock_data['Date'] <= end_date_3m)].drop(columns=['Date'])
 
-        start_date_6 = pd.to_datetime('2023-02-01')
-        end_date_6 = pd.to_datetime('2023-08-01')
-        filtered_df_6 = stock_data[(stock_data['Date'] >= start_date_6) & (stock_data['Date'] <= end_date_6)].drop(columns=['Date'])
+        start_date_6m = pd.to_datetime('2023-02-01')
+        end_date_6m = pd.to_datetime('2023-08-01')
+        filtered_df_6m = stock_data[(stock_data['Date'] >= start_date_6m) & (stock_data['Date'] <= end_date_6m)].drop(columns=['Date'])
 
         start_date_1y = pd.to_datetime('2023-02-01')
         end_date_1y = pd.to_datetime('2024-02-01')
         filtered_df_1y = stock_data[(stock_data['Date'] >= start_date_1y) & (stock_data['Date'] <= end_date_1y)].drop(columns=['Date'])
 
-        col5, col6, col7, col8 = st.columns(4)
-        with col5:
-            st.markdown('**One Month Return**')
-            st.write(func(filtered_df, 21))
-        with col6:
-            st.markdown('**Three Month Return**')
-            st.write(func(filtered_df_3, 57))
-        with col7:
-            st.markdown('**Six Month Return**')
-            st.write(func(filtered_df_6, 123))
-        with col8:
-            st.markdown('**One Year Return**')
-            st.write(func(filtered_df_1y, 246))
+        returns_1m = calculate_returns(filtered_df_1m, 21)
+        returns_3m = calculate_returns(filtered_df_3m, 63)
+        returns_6m = calculate_returns(filtered_df_6m, 126)
+        returns_1y = calculate_returns(filtered_df_1y, 252)
+
+        weights = {
+            'Tata Consultancy Services Ltd': 20.25,
+            'Infosys Ltd': 8.41,
+            'HDFC Bank Ltd': 9.36,
+            'ICICI Bank Ltd': 5.52,
+            'State Bank of India': 3.42,
+            'Hindustan Unilever Ltd': 14.91,
+            'ITC Ltd': 2.53,
+            'Larsen & Toubro Ltd': 15.88,
+            'Reliance Industries Ltd': 14.49,
+            'Bharti Airtel Ltd': 5.23
+            }
         
+        stock_ticker_map = {
+            'Tata Consultancy Services Ltd': 'TCS.NS',
+            'Infosys Ltd': 'INFY.NS',
+            'HDFC Bank Ltd': 'HDFCBANK.NS',
+            'ICICI Bank Ltd': 'ICICIBANK.NS',
+            'State Bank of India': 'SBIN.NS',
+            'Hindustan Unilever Ltd': 'HINDUNILVR.NS',
+            'ITC Ltd': 'ITC.NS',
+            'Larsen & Toubro Ltd': 'LT.NS',
+            'Reliance Industries Ltd': 'RELIANCE.NS',
+            'Bharti Airtel Ltd': 'BHARTIARTL.NS'
+            }
+        
+        top_stocks = list(weights.keys())
+        data = {
+            'Stock': list(weights.keys()),
+            'Weightages(%)': list(weights.values()),
+            '1 Month Return(%)': [returns_1m.get(stock_ticker_map[stock], np.nan)*100 for stock in weights.keys()],
+            '3 Month Return(%)': [returns_3m.get(stock_ticker_map[stock], np.nan)*100 for stock in weights.keys()],
+            '6 Month Return(%)': [returns_6m.get(stock_ticker_map[stock], np.nan)*100 for stock in weights.keys()],
+            '1 Year Return(%)': [returns_1y.get(stock_ticker_map[stock], np.nan)*100 for stock in weights.keys()]
+            }
+        
+        combined_data = pd.DataFrame(data)
+        combined_data = combined_data.sort_values(by='Weightages(%)', ascending=False)
+        st.write(combined_data)
+
         #POINT (h)
         st.markdown('**Top 10 contribution to returns, Bottom 10 contribution to returns**')
         port_weights = {'Tata Consultancy Services Ltd': 20.25,
@@ -613,21 +643,32 @@ if st.button('Next'):
         'Reliance Industries Ltd':40.04,
         'Bharti Airtel Ltd': 44.99}
 
-        contribution_return_port = {}
-        for key in port_weights:
-            contribution_return_port[key] = port_weights[key] * total_return[key]
-        st.markdown('**Contribution to return - PORT, Bottom 10**')
-        st.text(sorted(contribution_return_port.items(), key=lambda x: x[1]))
+        contribution_return_port = {
+            key: port_weights[key] * total_return[key] for key in port_weights
+            }
+        sorted_contribution_port = sorted(contribution_return_port.items(), key=lambda x: x[1])
 
-        contribution_return_bench = {}
-        for key in benchmark_weights:
-            contribution_return_bench[key] = benchmark_weights[key] * total_return[key]
-        st.markdown('**Contribution to return - BENCH, Bottom 10**')
-        st.text(sorted(contribution_return_bench.items(), key=lambda x: x[1]))
+        contribution_return_bench = {
+            key: benchmark_weights[key] * total_return[key] for key in benchmark_weights
+            }
+        sorted_contribution_bench = sorted(contribution_return_bench.items(), key=lambda x: x[1])
 
-        #Penny Stocks
+        df_port = pd.DataFrame(sorted_contribution_port, columns=['Stock', 'Contribution to return'])
+        df_bench = pd.DataFrame(sorted_contribution_bench, columns=['Stock', 'Contribution to return'])
+
+        col7, col8 = st.columns(2)
+        with col7:
+            st.markdown('**Contribution to return - PORT, Bottom 10**')
+            st.write(df_port)
+        with col8:
+            st.markdown('**Contribution to return - BENCH, Bottom 10**')
+            st.write(df_bench)
+
+
+
         st.markdown('**Penny Stocks**')
-        st.text('There are no penny stocks included in our portfolio as all of the listed stocks fall under HDFCNIFTY50 or NIFTY10')
+        st.text('There are no penny stocks included our portfolio as all of the listed stocks fall under HDFCNIFTY50')
+
 
         # closing_prices_df['Date'] = pd.to_datetime(closing_prices_df['Date'])
 
@@ -648,6 +689,7 @@ if st.button('Next'):
         optimal_stocks_to_buy = {stock: investment // stock_prices_for_algo.loc[0, stock] for stock, investment in investment_per_stock.items()}
         optimal_stocks_at = {stock: investment // stock_prices_for_algo.loc[0, stock] for stock, investment in investment_per_stock.items()}
         #st.write(optimal_stocks_at)
+        print(optimal_stocks_to_buy)
         st.markdown("**Optimal Number of Stocks to buy (weights given in the attribution report):**")
         #st.write(optimal_stocks_to_buy)
         #st.text(f"{'Stock':<25}{'Stocks to buy':>15}")
@@ -691,6 +733,7 @@ if st.button('Next'):
         optimal_stocks_to_buy_us = {stock: investment // df.loc[0, stock] for stock, investment in investment_per_stock_us.items()}
         optimal_stocks_qk = {stock: investment // df.loc[0, stock] for stock, investment in investment_per_stock_us.items()}
         #st.write(optimal_stocks_to_buy_us)
+        print(optimal_stocks_to_buy_us)
         st.markdown("**Optimal Number Stocks to buy (weights given by the Algorithm):**")
         #st.write(optimal_stocks_to_buy_us)
         #st.text(f"{'Stock':<25}{'Stocks to buy':>15}")
@@ -741,308 +784,12 @@ if st.button('Next'):
                 height=600,)
         
         st.plotly_chart(fig_compare)
-        
- # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-       if st.button('Rebalance Portfolio'):      
-  
-          def build_bqm(alpha, _mu, _sigma, cardinality):
-                      n = len(_mu)
-                      mdl = Model(name="stock_selection")
-                      x = mdl.binary_var_list(range(n), name="x")
-          
-                      objective = alpha * (x @ _sigma @ x) - _mu @ x
-          
-                      # cardinality constraint
-                      mdl.add_constraint(mdl.sum(x) == cardinality)
-                      mdl.minimize(objective)
-          
-                      qp = from_docplex_mp(mdl)
-                      qubo = QuadraticProgramToQubo().convert(qp)
-          
-                      bqm = dimod.as_bqm(
-                          qubo.objective.linear.to_array(),
-                          qubo.objective.quadratic.to_array(),
-                          dimod.BINARY,)
-                      return bqm
-                  
-                  #init_holding_amar = optimal_stocks_to_buy
-                  #st.text('init_holding_amar:')
-                  #st.write(init_holding_amar)
-          
-                  def process_portfolio(init_holdings):
-                      cfg.hpfilter_lamb = 6.25
-                      cfg.q = 1.0  # risk-aversion factor
-                      # classical
-                      cfg.fmin = 0.01  # 0.001
-                      cfg.fmax = 0.5  # 0.5
-          
-                      tickers = ['ADANIENT.NS', 'ADANIPORTS.NS', 'APOLLOHOSP.NS', 'ASIANPAINT.NS', 'AXISBANK.NS', 'BAJAJ-AUTO.NS', 
-                          'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'BPCL.NS', 'BHARTIARTL.NS', 'BRITANNIA.NS', 'CIPLA.NS', 'COALINDIA.NS', 
-                          'DIVISLAB.NS', 'DRREDDY.NS', 'EICHERMOT.NS', 'GRASIM.NS', 'HCLTECH.NS', 'HDFCBANK.NS', 'HDFCLIFE.NS', 
-                          'HEROMOTOCO.NS', 'HINDALCO.NS', 'HINDUNILVR.NS', 'ICICIBANK.NS', 'INDUSINDBK.NS', 'INFY.NS', 'ITC.NS', 
-                          'JSWSTEEL.NS', 'KOTAKBANK.NS', 'LT.NS', 'LTIM.NS', 'M&M.NS', 'MARUTI.NS', 'NESTLEIND.NS', 'NTPC.NS', 
-                          'ONGC.NS', 'POWERGRID.NS', 'RELIANCE.NS', 'SBILIFE.NS', 'SHRIRAMFIN.NS', 'SBIN.NS', 'SUNPHARMA.NS', 
-                          'TATAMOTORS.NS', 'TATASTEEL.NS', 'TCS.NS', 'TATACONSUM.NS', 'TECHM.NS', 'TITAN.NS', 'ULTRACEMCO.NS', 'WIPRO.NS']
-                      
-                      use_local = True
-                      if use_local is False:
-                          end_date = datetime.datetime(2024, 2, 26)
-                          start_date = datetime.datetime(2023, 2, 1)
-                          adj_close_df = pd.DataFrame()
-                          for ticker in tickers:
-                              data = yf.download(ticker, start=start_date, end=end_date)
-                              adj_close_df[ticker] = data['Adj Close']
-                          adj_close_df.to_csv('nifty50.csv')
-                      data = pd.read_csv('nifty50.csv', parse_dates=['Date'])
-          
-                      constituents = pd.read_csv('constituents_nifty50.csv')
-                      sector_map = constituents.loc[constituents['symbol'].isin(tickers)]
-                      dates = data["Date"].to_numpy()
-                      monthly_df = data.resample('3M', on='Date').last() # resample to every 3 months
-                      month_end_dates = monthly_df.index
-                      available_sectors, counts = np.unique(np.array(sector_map.sector.tolist()), return_counts=True)
-          
-                      total_budget = total_investment_amount
-                      num_months = len(month_end_dates)
-                      first_purchase = True 
-                      result = {}
-                      update_values = [0]
-                      months = []
-                      start_month = 0
-                      headers = ['Date', 'Value'] + list(tickers) + ['Risk', 'Returns', 'SR']
-                      opt_results_df = pd.DataFrame(columns=headers)
-                      row = []
-                      tickers = np.array(tickers)
-                      wallet = 0.0
-                      #portfolio_name = 'qkrishi'
-          
-                      for i, end_date in enumerate(month_end_dates[start_month:]):
-                          df = data[dates <= end_date].copy()
-                          df.set_index('Date', inplace=True)
-                          months.append(df.last_valid_index().date())
-                          if first_purchase:
-                              budget = total_budget
-                              initial_budget = total_budget
-                          else:
-                              value = sum([df.iloc[-1][s] * init_holdings.get(s, 0) for s in tickers]) # portfolio
-                              #print(i, f"Portfolio : {budget:.2f},")
-                              #print(f"Profit: {budget - initial_budget:.2f}")
-                              update_values.append(budget - initial_budget)
-                          
-                          for s in df.columns:
-                              cycle, trend = hpfilter(df[s], lamb=cfg.hpfilter_lamb)
-                              df[s] = trend
-                          
-                          log_returns = np.log(df) - np.log(df.shift(1))
-                          null_indices = np.where((log_returns.isna().sum() > 1).to_numpy())[0]
-                          drop_stocks = df.columns[null_indices]
-                          log_returns = log_returns.drop(columns=drop_stocks)
-                          log_returns = log_returns.dropna()
-                          tickers = log_returns.columns
-          
-                          mu = log_returns.mean().to_numpy() * 252
-                          sigma = log_returns.cov().to_numpy() * 252
-                          price = df.iloc[-1] # last day price
-          
-                          #Sell Idea
-                          threshold = 4 # Sell all stocks for `threshold` companies
-                          tickers_holding = np.array(list(init_holdings.keys())) # Names of the companies in initial holdings
-                          indices = np.in1d(tickers, tickers_holding) # Indices of `tickers_holding` in the list of all companies `tickers`
-                          argsort_indices = np.argsort(mu[indices]) # Obtain `mu` values at `indices`. Sort it.
-          
-                          sell_indices =  argsort_indices < threshold # indices of the least `threshold` companies (least in terms of mu value)
-                          sell_tickers = tickers_holding[argsort_indices][sell_indices] # names of those companies
-          
-                          # get the sectors of those companies. we will sell all stocks of them
-                          sectors = sector_map.loc[sector_map['symbol'].isin(sell_tickers)]['sector'].tolist()
-                          sectors = set(sectors) # remove duplicates
-          
-                          tickers_new = sector_map.loc[sector_map['sector'].isin(sectors)]['symbol'].tolist()
-                          tickers_new = np.intersect1d(np.array(tickers_new), np.array(tickers))
-                          tickers_new = np.setdiff1d(np.array(tickers_new), np.array(sell_tickers))
-          
-                          keep_indices = np.in1d(np.array(tickers), tickers_new)
-                          mu_new = mu[keep_indices]
-                          sigma_new = sigma[keep_indices][:, keep_indices]
-          
-                          sales_revenue = 0.0
-                          for tick in sell_tickers:
-                              sales_revenue += init_holdings[tick] * price[tick]
-                              init_holdings.pop(tick, None) # remove that company from holdings
-          
-                          bqm = build_bqm(cfg.q, mu_new, sigma_new, threshold)
-                          sampler_sa = SimulatedAnnealingSampler()
-                          result_sa = sampler_sa.sample(bqm, num_reads=5000)
-                          selection = list(result_sa.first.sample.values())
-                          selection = np.array(selection, dtype=bool)
-          
-                          tickers_selected = tickers_new[selection]
-          
-                          keep_indices = np.in1d(tickers_new, tickers_selected)
-                          mu_selected = mu_new[keep_indices]
-                          sigma_selected = sigma_new[keep_indices][:, keep_indices]
-          
-                          qpo = SinglePeriod(cfg.q, 
-                              mu_selected, 
-                              sigma_selected, 
-                              sales_revenue + wallet, 
-                              np.array([price[tick] for tick in tickers_selected]), 
-                              tickers_selected)
-                          solution = qpo.solve_cqm(init_holdings)
-                          result = solution['stocks'].copy()
-                          asset_weights = qpo._weight_allocation(solution['stocks'])
-                          optimal_weights_dict = qpo._get_optimal_weights_dict(
-                          asset_weights, solution['stocks'])
-          
-                          metrics = qpo._get_risk_ret(asset_weights) # risk, returns and sharpe ratio
-          
-                          for tick, val in result.items():
-                              if val != 0:
-                                  #print(f"{tick}, ({sector_map.loc[sector_map['symbol'] == tick]['sector'].tolist()[0]})", ' '*2, val)
-                                  if tick not in init_holdings.keys():
-                                      init_holdings[tick] = val
-                                  else:
-                                      init_holdings[tick] += val
-                          value = sum([price[s] * result.get(s, 0.0) for s in tickers_new]) # Amount invested in purchasing
-                          value_port = sum([price[s] * init_holdings.get(s, 0.0) for s in init_holdings]) # Portfolio Value after Rebalancing
-                          wallet = (sales_revenue + wallet) - value # Amount left in wallet
-          
-                          returns = f"{metrics['returns']:.2f}"
-                          risk = f"{metrics['risk']:.2f}"
-                          sr = f"{metrics['sharpe_ratio']:.2f}"
-          
-                          row = [months[-1].strftime('%Y-%m-%d'), value_port/initial_budget] + \
-                              [init_holdings.get(s, 0) for s in tickers] + \
-                              [risk, returns, sr] 
-                          
-                          opt_results_df.loc[i] = row.copy()
-                          first_purchase = False
-                      return opt_results_df
-                  
-                  #init_holding_amar = optimal_stocks_to_buy
-                  #st.write(init_holding_amar)
-                  #init_holding_qkrishi = optimal_stocks_to_buy_us
-          
-          
-                  # @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @  @ @ @ @ @ @ @ @  @ @ @ @ @ @ @  @ @ @ @ @@ @ @ @  @ @ @
-                  #st.text('optimal_stocks_to_buy:')
-                  #st.write(optimal_stocks_to_buy)
-                  process_portfolio_amar = process_portfolio(optimal_stocks_to_buy)
-                  #st.write(process_portfolio_amar)
-                  process_portfolio_amar_df = process_portfolio_amar.to_csv('rebalancing_amar.csv')
-                  dataf = pd.read_csv('rebalancing_amar.csv')
-                  #st.write(optimal_stocks_at)
-                  new_data_dict = optimal_stocks_at
-                  #st.text('new_data_dict:')
-                  #st.write(optimal_stocks_at)
-                  new_row_df = pd.DataFrame(new_data_dict, index=[0])
-                  for column in dataf.columns:
-                      if column not in new_row_df.columns:
-                          new_row_df[column] = "" if column == "Date" else 0
-          
-                  new_row_df = new_row_df[dataf.columns]
-                  updated_dataf = pd.concat([new_row_df, dataf], ignore_index=True)
-          
-                  tickerss = ['ADANIENT.NS', 'ADANIPORTS.NS', 'APOLLOHOSP.NS', 'ASIANPAINT.NS', 'AXISBANK.NS', 'BAJAJ-AUTO.NS', 
-                                      'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'BPCL.NS', 'BHARTIARTL.NS', 'BRITANNIA.NS', 'CIPLA.NS', 'COALINDIA.NS', 
-                                      'DIVISLAB.NS', 'DRREDDY.NS', 'EICHERMOT.NS', 'GRASIM.NS', 'HCLTECH.NS', 'HDFCBANK.NS', 'HDFCLIFE.NS', 
-                                      'HEROMOTOCO.NS', 'HINDALCO.NS', 'HINDUNILVR.NS', 'ICICIBANK.NS', 'INDUSINDBK.NS', 'INFY.NS', 'ITC.NS', 
-                                      'JSWSTEEL.NS', 'KOTAKBANK.NS', 'LT.NS', 'LTIM.NS', 'M&M.NS', 'MARUTI.NS', 'NESTLEIND.NS', 'NTPC.NS', 
-                                      'ONGC.NS', 'POWERGRID.NS', 'RELIANCE.NS', 'SBILIFE.NS', 'SHRIRAMFIN.NS', 'SBIN.NS', 'SUNPHARMA.NS', 
-                                      'TATAMOTORS.NS', 'TATASTEEL.NS', 'TCS.NS', 'TATACONSUM.NS', 'TECHM.NS', 'TITAN.NS', 'ULTRACEMCO.NS', 'WIPRO.NS']
-                  
-                  for column in updated_dataf.columns:
-                      if column in tickerss:
-                          updated_dataf[column] = updated_dataf[column].diff().fillna(updated_dataf[column])
-                  updated_dataf = updated_dataf.drop('Unnamed: 0', axis=1)
-                  columns_to_style = tickerss
-                  def apply_styling(value):
-                          if value > 0:
-                              return f'<span style="color: green;">{value}</span>'
-                          elif value < 0:
-                              return f'<span style="color: red;">{value}</span>'
-                          else:
-                              return value
-                  for column in columns_to_style:
-                          updated_dataf[column] = updated_dataf[column].apply(apply_styling)
-          
-                  updated_dataf["Value"] = updated_dataf["Value"] * total_investment_amount
-                  updated_dataf = updated_dataf.loc[:, (updated_dataf != 0).any(axis=0)] # to remove columns with 0s
-                  updated_dataf = updated_dataf.to_html(float_format=lambda x: '{:.2f}'.format(x), escape=False)
-                  #st.write(new_data_dict)
-                  st.write("AMAR's Portfolio after Rebalancing:")
-                  st.write(updated_dataf, unsafe_allow_html=True)
-                  df_fta = pd.read_html(updated_dataf)[0]
-                  df_fta['Date'] = pd.to_datetime(df_fta['Date'])
-                  # @ @ @@ @ @ @ @ @ @ @ @ @ @ @  @ @ @ @ @ @ @ @ @ @ @ @ @ @ @  @ @ @  @ @  @ @ @ @ @ @ 
-          
-                  process_portfolio_qkrishi = process_portfolio(optimal_stocks_to_buy_us)
-                  #st.write(process_portfolio_amar)
-                  process_portfolio_qkrishi_df = process_portfolio_qkrishi.to_csv('rebalancing_qkrishi.csv')
-                  datafq = pd.read_csv('rebalancing_qkrishi.csv')
-                  new_data_dictq = optimal_stocks_qk
-                  #st.write(new_data_dictq)
-                  new_row_dfq = pd.DataFrame(new_data_dictq, index=[0])
-                  for column in datafq.columns:
-                      if column not in new_row_dfq.columns:
-                          new_row_dfq[column] = "" if column == "Date" else 0
-          
-                  new_row_dfq = new_row_dfq[datafq.columns]
-                  updated_datafq = pd.concat([new_row_dfq, datafq], ignore_index=True)
-          
-                  tickersss = ['ADANIENT.NS', 'ADANIPORTS.NS', 'APOLLOHOSP.NS', 'ASIANPAINT.NS', 'AXISBANK.NS', 'BAJAJ-AUTO.NS', 
-                                      'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'BPCL.NS', 'BHARTIARTL.NS', 'BRITANNIA.NS', 'CIPLA.NS', 'COALINDIA.NS', 
-                                      'DIVISLAB.NS', 'DRREDDY.NS', 'EICHERMOT.NS', 'GRASIM.NS', 'HCLTECH.NS', 'HDFCBANK.NS', 'HDFCLIFE.NS', 
-                                      'HEROMOTOCO.NS', 'HINDALCO.NS', 'HINDUNILVR.NS', 'ICICIBANK.NS', 'INDUSINDBK.NS', 'INFY.NS', 'ITC.NS', 
-                                      'JSWSTEEL.NS', 'KOTAKBANK.NS', 'LT.NS', 'LTIM.NS', 'M&M.NS', 'MARUTI.NS', 'NESTLEIND.NS', 'NTPC.NS', 
-                                      'ONGC.NS', 'POWERGRID.NS', 'RELIANCE.NS', 'SBILIFE.NS', 'SHRIRAMFIN.NS', 'SBIN.NS', 'SUNPHARMA.NS', 
-                                      'TATAMOTORS.NS', 'TATASTEEL.NS', 'TCS.NS', 'TATACONSUM.NS', 'TECHM.NS', 'TITAN.NS', 'ULTRACEMCO.NS', 'WIPRO.NS']
-                  
-                  for column in updated_datafq.columns:
-                      if column in tickersss:
-                          updated_datafq[column] = updated_datafq[column].diff().fillna(updated_datafq[column])
-                  updated_datafq = updated_datafq.drop('Unnamed: 0', axis=1)
-                  columns_to_style = tickersss
-                  def apply_styling(value):
-                          if value > 0:
-                              return f'<span style="color: green;">{value}</span>'
-                          elif value < 0:
-                              return f'<span style="color: red;">{value}</span>'
-                          else:
-                              return value
-                  for column in columns_to_style:
-                          updated_datafq[column] = updated_datafq[column].apply(apply_styling)
-          
-                  updated_datafq["Value"] = updated_datafq["Value"] * total_investment_amount
-                  updated_datafq = updated_datafq.loc[:, (updated_datafq != 0).any(axis=0)] # to remove all columns with 0s
-                  updated_datafq = updated_datafq.to_html(float_format=lambda x: '{:.2f}'.format(x), escape=False)
-                  #st.write(new_data_dict)
-                  st.write("QKRISHI's Portfolio after Rebalancing:")
-                  st.write(updated_datafq, unsafe_allow_html=True)
-                  df_ftq = pd.read_html(updated_datafq)[0]
-                  df_ftq['Date'] = pd.to_datetime(df_fta['Date'])
-                  
-          
-                  fig_rebalancing = go.Figure()
-                  fig_rebalancing.add_trace(go.Scatter(x=df_fta['Date'], y=df_fta['Value'], mode='lines+markers', name='Bank Portfolio+ Qkrishi Rebalancing', line=dict(color='red'), showlegend=True))
-                  fig_rebalancing.add_trace(go.Scatter(x=df_ftq['Date'], y=df_ftq['Value'], mode='lines+markers', name='Qkrishi Portfolio  + Qkrishi Rebalancing', line=dict(color='blue'), showlegend=True))
-                  
-                  fig_rebalancing.update_layout(title='Rebalanced Portfolio Values Over Time',
-                      xaxis_title='Date', 
-                      yaxis_title='Portfolio Value',
-                      autosize=False, 
-                      width=1000, 
-                      height=600,
-                      yaxis_range=[1500000,2200000])
-                  
-                  st.plotly_chart(fig_rebalancing)
-                  
-          
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  # # # # # # # 
+
 
     else:
         st.write("The number of assets entered cannot be compared with the Attribution Report. But let us build a portfolio based on the given assets.")
-        tickers = assets_input.replace(' ', '').split(',')  # Remove spaces and split by comma
+        assets_string = ''.join(assets_input)
+        tickers = assets_string.replace(' ', '').split(',')
         if tickers and tickers[0]:  # Check if there's at least one ticker
             # Initialize an empty DataFrame to hold closing prices
             close_prices = pd.DataFrame()
@@ -1192,3 +939,296 @@ if st.button('Next'):
                 fig_port.update_traces(name='Portfolio Value', showlegend=True)
                 fig_port.update_layout(xaxis_title='Date', yaxis_title='Portfolio Value (in rupees)', autosize=False, width=1000, height=600)
                 st.plotly_chart(fig_port)
+
+ # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+if st.button('Rebalancing'):
+    #st.write('Yes, I am Working')
+    def build_bqm(alpha, _mu, _sigma, cardinality):
+        n = len(_mu)
+        mdl = Model(name="stock_selection")
+        x = mdl.binary_var_list(range(n), name="x")
+        objective = alpha * (x @ _sigma @ x) - _mu @ x
+        # cardinality constraint
+        mdl.add_constraint(mdl.sum(x) == cardinality)
+        mdl.minimize(objective)
+        qp = from_docplex_mp(mdl)
+        qubo = QuadraticProgramToQubo().convert(qp)
+        bqm = dimod.as_bqm(
+            qubo.objective.linear.to_array(),
+            qubo.objective.quadratic.to_array(),
+            dimod.BINARY,)
+        return bqm
+    
+    def process_portfolio(init_holdings):
+        cfg.hpfilter_lamb = 6.25
+        cfg.q = 1.0  # risk-aversion factor
+        # classical
+        cfg.fmin = 0.01  # 0.001
+        cfg.fmax = 0.5  # 0.5
+
+        tickers = ['ADANIENT.NS', 'ADANIPORTS.NS', 'APOLLOHOSP.NS', 'ASIANPAINT.NS', 'AXISBANK.NS', 'BAJAJ-AUTO.NS', 
+                    'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'BPCL.NS', 'BHARTIARTL.NS', 'BRITANNIA.NS', 'CIPLA.NS', 'COALINDIA.NS', 
+                    'DIVISLAB.NS', 'DRREDDY.NS', 'EICHERMOT.NS', 'GRASIM.NS', 'HCLTECH.NS', 'HDFCBANK.NS', 'HDFCLIFE.NS', 
+                    'HEROMOTOCO.NS', 'HINDALCO.NS', 'HINDUNILVR.NS', 'ICICIBANK.NS', 'INDUSINDBK.NS', 'INFY.NS', 'ITC.NS', 
+                    'JSWSTEEL.NS', 'KOTAKBANK.NS', 'LT.NS', 'LTIM.NS', 'M&M.NS', 'MARUTI.NS', 'NESTLEIND.NS', 'NTPC.NS', 
+                    'ONGC.NS', 'POWERGRID.NS', 'RELIANCE.NS', 'SBILIFE.NS', 'SHRIRAMFIN.NS', 'SBIN.NS', 'SUNPHARMA.NS', 
+                    'TATAMOTORS.NS', 'TATASTEEL.NS', 'TCS.NS', 'TATACONSUM.NS', 'TECHM.NS', 'TITAN.NS', 'ULTRACEMCO.NS', 'WIPRO.NS']
+        
+        use_local = True
+        if use_local is False:
+            end_date = datetime.datetime(2024, 2, 26)
+            start_date = datetime.datetime(2023, 2, 1)
+            adj_close_df = pd.DataFrame()
+            for ticker in tickers:
+                data = yf.download(ticker, start=start_date, end=end_date)
+                adj_close_df[ticker] = data['Adj Close']
+            adj_close_df.to_csv('nifty50.csv')
+        data = pd.read_csv('nifty50.csv', parse_dates=['Date'])
+        constituents = pd.read_csv('constituents_nifty50.csv')
+        sector_map = constituents.loc[constituents['symbol'].isin(tickers)]
+        dates = data["Date"].to_numpy()
+        monthly_df = data.resample('3M', on='Date').last() # resample to every 3 months
+        month_end_dates = monthly_df.index
+        available_sectors, counts = np.unique(np.array(sector_map.sector.tolist()), return_counts=True)
+        #total_budget = total_investment_amount
+        total_budget = 1604500.43
+        num_months = len(month_end_dates)
+        first_purchase = True 
+        result = {}
+        update_values = [0]
+        months = []
+        start_month = 0
+        headers = ['Date', 'Value'] + list(tickers) + ['Risk', 'Returns', 'SR']
+        opt_results_df = pd.DataFrame(columns=headers)
+        row = []
+        tickers = np.array(tickers)
+        wallet = 0.0
+        #portfolio_name = 'qkrishi'
+
+        for i, end_date in enumerate(month_end_dates[start_month:]):
+            df = data[dates <= end_date].copy()
+            df.set_index('Date', inplace=True)
+            months.append(df.last_valid_index().date())
+            if first_purchase:
+                budget = total_budget
+                initial_budget = total_budget
+            else:
+                value = sum([df.iloc[-1][s] * init_holdings.get(s, 0) for s in tickers]) # portfolio
+                #print(i, f"Portfolio : {budget:.2f},")
+                #print(f"Profit: {budget - initial_budget:.2f}")
+                update_values.append(budget - initial_budget)
+
+            for s in df.columns:
+                cycle, trend = hpfilter(df[s], lamb=cfg.hpfilter_lamb)
+                df[s] = trend
+
+            log_returns = np.log(df) - np.log(df.shift(1))
+            null_indices = np.where((log_returns.isna().sum() > 1).to_numpy())[0]
+            drop_stocks = df.columns[null_indices]
+            log_returns = log_returns.drop(columns=drop_stocks)
+            log_returns = log_returns.dropna()
+            tickers = log_returns.columns
+            mu = log_returns.mean().to_numpy() * 252
+            sigma = log_returns.cov().to_numpy() * 252
+            price = df.iloc[-1] # last day price
+
+            #Sell Idea
+            threshold = 4 # Sell all stocks for `threshold` companies
+            tickers_holding = np.array(list(init_holdings.keys())) # Names of the companies in initial holdings
+            indices = np.in1d(tickers, tickers_holding) # Indices of `tickers_holding` in the list of all companies `tickers`
+            argsort_indices = np.argsort(mu[indices]) # Obtain `mu` values at `indices`. Sort it.
+          
+            sell_indices =  argsort_indices < threshold # indices of the least `threshold` companies (least in terms of mu value)
+            sell_tickers = tickers_holding[argsort_indices][sell_indices] # names of those companies
+          
+            # get the sectors of those companies. we will sell all stocks of them
+            sectors = sector_map.loc[sector_map['symbol'].isin(sell_tickers)]['sector'].tolist()
+            sectors = set(sectors) # remove duplicates
+
+            tickers_new = sector_map.loc[sector_map['sector'].isin(sectors)]['symbol'].tolist()
+            tickers_new = np.intersect1d(np.array(tickers_new), np.array(tickers))
+            tickers_new = np.setdiff1d(np.array(tickers_new), np.array(sell_tickers))
+          
+            keep_indices = np.in1d(np.array(tickers), tickers_new)
+            mu_new = mu[keep_indices]
+            sigma_new = sigma[keep_indices][:, keep_indices]
+          
+            sales_revenue = 0.0
+            for tick in sell_tickers:
+                sales_revenue += init_holdings[tick] * price[tick]
+                init_holdings.pop(tick, None) # remove that company from holdings
+
+            bqm = build_bqm(cfg.q, mu_new, sigma_new, threshold)
+            sampler_sa = SimulatedAnnealingSampler()
+            result_sa = sampler_sa.sample(bqm, num_reads=5000)
+            selection = list(result_sa.first.sample.values())
+            selection = np.array(selection, dtype=bool)
+
+            tickers_selected = tickers_new[selection]
+            keep_indices = np.in1d(tickers_new, tickers_selected)
+            mu_selected = mu_new[keep_indices]
+            sigma_selected = sigma_new[keep_indices][:, keep_indices]
+
+            qpo = SinglePeriod(cfg.q,
+                               mu_selected,
+                               sigma_selected,
+                               sales_revenue + wallet, 
+                               np.array([price[tick] for tick in tickers_selected]), 
+                               tickers_selected)
+            solution = qpo.solve_cqm(init_holdings)
+            result = solution['stocks'].copy()
+            asset_weights = qpo._weight_allocation(solution['stocks'])
+            optimal_weights_dict = qpo._get_optimal_weights_dict(
+            asset_weights, solution['stocks'])
+            metrics = qpo._get_risk_ret(asset_weights) # risk, returns and sharpe ratio
+
+            for tick, val in result.items():
+                if val != 0:
+                    #print(f"{tick}, ({sector_map.loc[sector_map['symbol'] == tick]['sector'].tolist()[0]})", ' '*2, val)
+                    if tick not in init_holdings.keys():
+                        init_holdings[tick] = val
+                    else:
+                        init_holdings[tick] += val
+            
+            value = sum([price[s] * result.get(s, 0.0) for s in tickers_new]) # Amount invested in purchasing
+            value_port = sum([price[s] * init_holdings.get(s, 0.0) for s in init_holdings]) # Portfolio Value after Rebalancing
+            wallet = (sales_revenue + wallet) - value # Amount left in wallet
+
+            returns = f"{metrics['returns']:.2f}"
+            risk = f"{metrics['risk']:.2f}"
+            sr = f"{metrics['sharpe_ratio']:.2f}"
+
+            row = [months[-1].strftime('%Y-%m-%d'), value_port/initial_budget] + \
+                [init_holdings.get(s, 0) for s in tickers] + \
+                [risk, returns, sr] 
+            
+            opt_results_df.loc[i] = row.copy()
+            first_purchase = False
+        return opt_results_df
+    
+    #init_holding_amar = optimal_stocks_to_buy
+    #st.write(init_holding_amar)
+    #init_holding_qkrishi = optimal_stocks_to_buy_us
+
+    # @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @  @ @ @ @ @ @ @ @  @ @ @ @ @ @ @  @ @ @ @ @@ @ @ @  @ @ @
+    #st.text('optimal_stocks_to_buy:')
+    #st.write(optimal_stocks_to_buy)
+    optimal_stocks_to_buy = {'BHARTIARTL.NS': 109.0, 'HDFCBANK.NS': 92.0, 'HINDUNILVR.NS': 92.0, 'ICICIBANK.NS': 104.0, 'INFY.NS': 86.0, 'ITC.NS': 112.0, 'LT.NS': 118.0, 'RELIANCE.NS': 107.0, 'SBIN.NS': 104.0, 'TCS.NS': 95.0}
+    optimal_stocks_to_buy_us = {'BHARTIARTL.NS': 336.0, 'HDFCBANK.NS': 25.0, 'HINDUNILVR.NS': 28.0, 'ICICIBANK.NS': 196.0, 'INFY.NS': 70.0, 'ITC.NS': 458.0, 'LT.NS': 132.0, 'RELIANCE.NS': 92.0, 'SBIN.NS': 311.0, 'TCS.NS': 38.0}
+
+
+
+    process_portfolio_amar = process_portfolio(optimal_stocks_to_buy)
+    #st.write(process_portfolio_amar)
+    process_portfolio_amar_df = process_portfolio_amar.to_csv('rebalancing_amar.csv')
+    dataf = pd.read_csv('rebalancing_amar.csv')
+    #st.write(optimal_stocks_at)
+    new_data_dict = optimal_stocks_to_buy
+    #st.text('new_data_dict:')
+    #st.write(optimal_stocks_at)
+    new_row_df = pd.DataFrame(new_data_dict, index=[0])
+    for column in dataf.columns:
+        if column not in new_row_df.columns:
+            new_row_df[column] = "" if column == "Date" else 0
+    new_row_df = new_row_df[dataf.columns]
+    updated_dataf = pd.concat([new_row_df, dataf], ignore_index=True)
+
+    tickerss = ['ADANIENT.NS', 'ADANIPORTS.NS', 'APOLLOHOSP.NS', 'ASIANPAINT.NS', 'AXISBANK.NS', 'BAJAJ-AUTO.NS', 
+                'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'BPCL.NS', 'BHARTIARTL.NS', 'BRITANNIA.NS', 'CIPLA.NS', 'COALINDIA.NS', 
+                'DIVISLAB.NS', 'DRREDDY.NS', 'EICHERMOT.NS', 'GRASIM.NS', 'HCLTECH.NS', 'HDFCBANK.NS', 'HDFCLIFE.NS', 
+                'HEROMOTOCO.NS', 'HINDALCO.NS', 'HINDUNILVR.NS', 'ICICIBANK.NS', 'INDUSINDBK.NS', 'INFY.NS', 'ITC.NS', 
+                'JSWSTEEL.NS', 'KOTAKBANK.NS', 'LT.NS', 'LTIM.NS', 'M&M.NS', 'MARUTI.NS', 'NESTLEIND.NS', 'NTPC.NS', 
+                'ONGC.NS', 'POWERGRID.NS', 'RELIANCE.NS', 'SBILIFE.NS', 'SHRIRAMFIN.NS', 'SBIN.NS', 'SUNPHARMA.NS', 
+                'TATAMOTORS.NS', 'TATASTEEL.NS', 'TCS.NS', 'TATACONSUM.NS', 'TECHM.NS', 'TITAN.NS', 'ULTRACEMCO.NS', 'WIPRO.NS']
+
+    for column in updated_dataf.columns:
+        if column in tickerss:
+            updated_dataf[column] = updated_dataf[column].diff().fillna(updated_dataf[column])
+    updated_dataf = updated_dataf.drop('Unnamed: 0', axis=1)
+    columns_to_style = tickerss
+    def apply_styling(value):
+        if value > 0:
+            return f'<span style="color: green;">{value}</span>'
+        elif value < 0:
+            return f'<span style="color: red;">{value}</span>'
+        else:
+            return value
+    
+    for column in columns_to_style:
+        updated_dataf[column] = updated_dataf[column].apply(apply_styling)
+    updated_dataf["Value"] = updated_dataf["Value"] * 1604500.43
+    updated_dataf = updated_dataf.loc[:, (updated_dataf != 0).any(axis=0)] # to remove columns with 0s
+    updated_dataf = updated_dataf.to_html(float_format=lambda x: '{:.2f}'.format(x), escape=False)
+    #st.write(new_data_dict)
+    st.write("AMAR's Portfolio after Rebalancing:")
+    st.write(updated_dataf, unsafe_allow_html=True)
+    df_fta = pd.read_html(updated_dataf)[0]
+    df_fta['Date'] = pd.to_datetime(df_fta['Date'])
+
+    # @ @ @@ @ @ @ @ @ @ @ @ @ @ @  @ @ @ @ @ @ @ @ @ @ @ @ @ @ @  @ @ @  @ @  @ @ @ @ @ @ 
+    process_portfolio_qkrishi = process_portfolio(optimal_stocks_to_buy_us)
+    #st.write(process_portfolio_amar)
+    process_portfolio_qkrishi_df = process_portfolio_qkrishi.to_csv('rebalancing_qkrishi.csv')
+    datafq = pd.read_csv('rebalancing_qkrishi.csv')
+    new_data_dictq = optimal_stocks_to_buy_us
+    #st.write(new_data_dictq)
+    new_row_dfq = pd.DataFrame(new_data_dictq, index=[0])
+    for column in datafq.columns:
+        if column not in new_row_dfq.columns:
+            new_row_dfq[column] = "" if column == "Date" else 0
+
+    new_row_dfq = new_row_dfq[datafq.columns]
+    updated_datafq = pd.concat([new_row_dfq, datafq], ignore_index=True)
+
+    tickersss = ['ADANIENT.NS', 'ADANIPORTS.NS', 'APOLLOHOSP.NS', 'ASIANPAINT.NS', 'AXISBANK.NS', 'BAJAJ-AUTO.NS', 
+                'BAJFINANCE.NS', 'BAJAJFINSV.NS', 'BPCL.NS', 'BHARTIARTL.NS', 'BRITANNIA.NS', 'CIPLA.NS', 'COALINDIA.NS', 
+                'DIVISLAB.NS', 'DRREDDY.NS', 'EICHERMOT.NS', 'GRASIM.NS', 'HCLTECH.NS', 'HDFCBANK.NS', 'HDFCLIFE.NS', 
+                'HEROMOTOCO.NS', 'HINDALCO.NS', 'HINDUNILVR.NS', 'ICICIBANK.NS', 'INDUSINDBK.NS', 'INFY.NS', 'ITC.NS', 
+                'JSWSTEEL.NS', 'KOTAKBANK.NS', 'LT.NS', 'LTIM.NS', 'M&M.NS', 'MARUTI.NS', 'NESTLEIND.NS', 'NTPC.NS', 
+                'ONGC.NS', 'POWERGRID.NS', 'RELIANCE.NS', 'SBILIFE.NS', 'SHRIRAMFIN.NS', 'SBIN.NS', 'SUNPHARMA.NS', 
+                'TATAMOTORS.NS', 'TATASTEEL.NS', 'TCS.NS', 'TATACONSUM.NS', 'TECHM.NS', 'TITAN.NS', 'ULTRACEMCO.NS', 'WIPRO.NS']
+
+    for column in updated_datafq.columns:
+        if column in tickersss:
+                updated_datafq[column] = updated_datafq[column].diff().fillna(updated_datafq[column])
+    updated_datafq = updated_datafq.drop('Unnamed: 0', axis=1)
+    columns_to_style = tickersss
+
+    def apply_styling(value):
+        if value > 0:
+            return f'<span style="color: green;">{value}</span>'
+        elif value < 0:
+            return f'<span style="color: red;">{value}</span>'
+        else:
+            return value
+    
+    for column in columns_to_style:
+        updated_datafq[column] = updated_datafq[column].apply(apply_styling)
+
+    updated_datafq["Value"] = updated_datafq["Value"] * 1604500.43
+    updated_datafq = updated_datafq.loc[:, (updated_datafq != 0).any(axis=0)] # to remove all columns with 0s
+    updated_datafq = updated_datafq.to_html(float_format=lambda x: '{:.2f}'.format(x), escape=False)
+    #st.write(new_data_dict)
+    st.write("QKRISHI's Portfolio after Rebalancing:")
+    st.write(updated_datafq, unsafe_allow_html=True)
+    df_ftq = pd.read_html(updated_datafq)[0]
+    df_ftq['Date'] = pd.to_datetime(df_fta['Date'])
+
+    fig_rebalancing = go.Figure()
+    fig_rebalancing.add_trace(go.Scatter(x=df_fta['Date'], y=df_fta['Value'], mode='lines+markers', name='Bank Portfolio+ Qkrishi Rebalancing', line=dict(color='red'), showlegend=True))
+    fig_rebalancing.add_trace(go.Scatter(x=df_ftq['Date'], y=df_ftq['Value'], mode='lines+markers', name='Qkrishi Portfolio  + Qkrishi Rebalancing', line=dict(color='blue'), showlegend=True))
+
+    fig_rebalancing.update_layout(title='Rebalanced Portfolio Values Over Time',
+        xaxis_title='Date', 
+        yaxis_title='Portfolio Value',
+        autosize=False, 
+        width=1000, 
+        height=600,
+        yaxis_range=[1500000,2200000])
+    
+    st.plotly_chart(fig_rebalancing)
+
+
+    
+
+
